@@ -1,8 +1,37 @@
-// Database Schema Definitions
-// This file defines the PostgreSQL database schema for Drizzle ORM, mapping users, sessions, accounts, and verifications.
+/**
+ * @file src/db/schema.ts
+ * @description Database Schema Definition (Drizzle ORM for PostgreSQL)
+ * 
+ * --- PLACEMENT INTERVIEW BRIEFING ---
+ * 
+ * 1. WHY DRIZZLE SCHEMA?
+ *    Drizzle allows us to write database schemas in pure TypeScript. This acts as the single source of truth 
+ *    for both our database structure (SQL) and our code's type definitions. It ensures complete type safety 
+ *    across client, server, and queries.
+ * 
+ * 2. WHY THESE SPECIFIC TABLES (user, session, account, verification)?
+ *    These four tables form the standard schema architecture required by **Better Auth**.
+ *    - `user`: Stores basic profile data (name, email, profile image).
+ *    - `session`: Stores active user login sessions. Used for session persistence (preventing users from logging out on refresh).
+ *    - `account`: Tracks credentials (hashed password) and links social OAuth logins (Google, GitHub) to the same user.
+ *    - `verification`: Stores temporary secure tokens for email verification or password resets.
+ * 
+ * 3. WHY CASCADING DELETES (onDelete: "cascade")?
+ *    When a row in the `user` table is deleted, foreign key constraints with `onDelete: "cascade"` ensure that all 
+ *    linked `session` and `account` records are automatically deleted by the database engine.
+ *    - **Why?** It maintains referential integrity and prevents "orphan records" (dead data occupying disk space).
+ * 
+ * 4. WHY INDEXES (index)?
+ *    We define indexes on foreign keys and unique identifiers (like `userId` and `identifier`):
+ *    - **Why?** Every time a user navigates to a page, the server queries the database to check if the session token or 
+ *      user ID exists. Without an index, the database performs a slow "Sequential Scan" (checking every row, O(N)). 
+ *      An index organizes the data in a B-Tree structure, enabling high-speed "Index Scans" (O(log N)), which 
+ *      drastically speeds up user authentication checks.
+ */
+
 import { pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
 
-// Define the core 'user' table mapping system users and their metadata.
+// 1. Core User Table
 export const user = pgTable("user", {
     id: text("id").primaryKey(),
     name: text("name").notNull(),
@@ -12,11 +41,11 @@ export const user = pgTable("user", {
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
         .defaultNow()
-        .$onUpdate(() => /* @__PURE__ */ new Date())
+        .$onUpdate(() => new Date())
         .notNull(),
 });
 
-// Define the 'session' table representing active login sessions for users.
+// 2. Active Login Sessions Table
 export const session = pgTable(
     "session",
     {
@@ -25,7 +54,7 @@ export const session = pgTable(
         token: text("token").notNull().unique(),
         createdAt: timestamp("created_at").defaultNow().notNull(),
         updatedAt: timestamp("updated_at")
-            .$onUpdate(() => /* @__PURE__ */ new Date())
+            .$onUpdate(() => new Date())
             .notNull(),
         ipAddress: text("ip_address"),
         userAgent: text("user_agent"),
@@ -36,7 +65,7 @@ export const session = pgTable(
     (table) => [index("session_userId_idx").on(table.userId)], // Indexes userId field for query performance
 );
 
-// Define the 'account' table representing connected credentials/OAuth providers (Google, GitHub, etc.) for users.
+// 3. Authentication Credentials & OAuth Providers Table
 export const account = pgTable(
     "account",
     {
@@ -55,13 +84,13 @@ export const account = pgTable(
         password: text("password"), // Stores hashed password when credentials provider is used
         createdAt: timestamp("created_at").defaultNow().notNull(),
         updatedAt: timestamp("updated_at")
-            .$onUpdate(() => /* @__PURE__ */ new Date())
+            .$onUpdate(() => new Date())
             .notNull(),
     },
-    (table) => [index("account_userId_idx").on(table.userId)], // Indexes userId
+    (table) => [index("account_userId_idx").on(table.userId)], // Indexes userId for faster joins
 );
 
-// Define the 'verification' table for storage of email and password verification/reset tokens.
+// 4. Verification Codes & Passcode Tokens Table
 export const verification = pgTable(
     "verification",
     {
@@ -72,7 +101,7 @@ export const verification = pgTable(
         createdAt: timestamp("created_at").defaultNow().notNull(),
         updatedAt: timestamp("updated_at")
             .defaultNow()
-            .$onUpdate(() => /* @__PURE__ */ new Date())
+            .$onUpdate(() => new Date())
             .notNull(),
     },
     (table) => [index("verification_identifier_idx").on(table.identifier)], // Indexes verification identifier
