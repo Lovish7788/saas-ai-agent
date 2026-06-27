@@ -1,5 +1,7 @@
 "use client";
 
+// Forgot Password View Component
+// Handles requesting a password reset email link for existing user accounts.
 import { z } from "zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -12,21 +14,24 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { OctagonAlertIcon, CircleCheckIcon } from "lucide-react";
 
-// The schema is simple: just an email is required to send the reset link
+// 1. Validation Schema: Validates that the input is a correctly formatted email address.
 const formSchema = z.object({
     email: z.string().email({ message: "Please enter a valid email." }),
 });
 
 export const ForgotPasswordView = () => {
+    // 2. UI State: Manages request loading (pending), error alerts, and successful transmission status.
     const [pending, setPending] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
 
+    // 3. Form Controller: Hook form setup using Zod resolver for input validation.
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: { email: "" },
     });
 
+    // 4. Submission Handler: Requests a password reset link via the Better Auth client API.
     const onSubmit = (data: z.infer<typeof formSchema>) => {
         setError(null);
         setPending(true);
@@ -34,31 +39,32 @@ export const ForgotPasswordView = () => {
         authClient.requestPasswordReset(
             {
                 email: data.email,
-                redirectTo: "/reset-password", // The page where they will enter the new password
+                redirectTo: "/reset-password", // Redirect target after the user clicks the reset link in the email
             },
             {
                 onSuccess: () => {
                     setPending(false);
-                    setSuccess(true);
+                    setSuccess(true); // Switches UI to show confirmation alert
                 },
                 onError: ({ error }) => {
                     setPending(false);
-                    setError(error.message);
+                    setError(error.message); // Displays error alert on failure
                 },
             }
         );
     };
 
     return (
+        // Centered form wrapper matching layout dimensions
         <div className="flex flex-col gap-6 max-w-md w-full mx-auto p-4">
             <Card className="p-6">
-
                 <CardContent className="space-y-4">
                     <div className="text-center">
                         <h1 className="text-2xl font-bold">Forgot Password</h1>
                         <p className="text-muted-foreground">Enter your email to receive a reset link.</p>
                     </div>
 
+                    {/* Conditional rendering based on email link transmission success */}
                     {success ? (
                         <Alert className="bg-emerald-500/10 border-none text-emerald-600">
                             <CircleCheckIcon className="h-4 w-4" />
@@ -67,6 +73,7 @@ export const ForgotPasswordView = () => {
                     ) : (
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                                {/* FormField connects inputs to the validator controller */}
                                 <FormField control={form.control} name="email" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Email</FormLabel>
@@ -77,6 +84,7 @@ export const ForgotPasswordView = () => {
                                     </FormItem>
                                 )} />
 
+                                {/* Displays server-side or validation errors if any occur */}
                                 {!!error && (
                                     <Alert className="bg-destructive/10 border-none">
                                         <OctagonAlertIcon className="h-4 w-4 !text-destructive" />
@@ -84,6 +92,7 @@ export const ForgotPasswordView = () => {
                                     </Alert>
                                 )}
 
+                                {/* Submit button with loading text representation */}
                                 <Button disabled={pending} type="submit" className="w-full">
                                     {pending ? "Sending..." : "Send Reset Link"}
                                 </Button>
