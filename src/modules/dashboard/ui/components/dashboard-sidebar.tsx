@@ -41,8 +41,17 @@ import {
     SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
+import dynamic from "next/dynamic";
 import { DashboardTrial } from "./dashboard-trial";
-import { DashboardUserButton } from "./dashboard-user-button";
+
+// Dynamically import DashboardUserButton with SSR disabled.
+// Why? The component calls authClient.useSession(), which relies on client-side React hooks.
+// During Next.js Server-Side Rendering (SSR), there is no active browser context, which triggers
+// an 'Invalid hook call' error. Disabling SSR forces the component to render solely on the client.
+const DashboardUserButton = dynamic(
+    () => import("./dashboard-user-button").then((mod) => mod.DashboardUserButton),
+    { ssr: false }
+);
 
 const firstSection = [
     {
@@ -95,7 +104,7 @@ export const DashboardSidebar = () => {
                                             asChild
                                             className={cn(
                                                 "h-10 transition-colors duration-200",
-                                                "hover:bg-sidebar-accent/50", // Subtler hover
+                                                "hover:bg-sidebar-accent/50 hover:brightness-90", // Subtler hover + decrease brightness
                                                 pathname === item.href && "bg-sidebar-accent text-sidebar-primary-foreground font-semibold" // Solid active state
                                             )}
                                             isActive={pathname === item.href}
@@ -131,7 +140,7 @@ export const DashboardSidebar = () => {
                                             asChild
                                             className={cn(
                                                 "h-10 transition-colors duration-200",
-                                                "hover:bg-sidebar-accent/50", // Subtler hover
+                                                "hover:bg-sidebar-accent/50 hover:brightness-90", // Subtler hover + decrease brightness
                                                 pathname === item.href && "bg-sidebar-accent text-sidebar-primary-foreground font-semibold" // Solid active state
                                             )}
                                             isActive={pathname === item.href}

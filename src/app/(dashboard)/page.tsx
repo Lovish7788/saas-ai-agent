@@ -27,7 +27,7 @@
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
-import { HomeView } from "@/modules/home/ui/views/home-view"
+import { HomeViewClient } from "@/modules/home/ui/views/home-view-client"
 
 const Page = async () => {
   // 1. Perform server-side session check using request cookies/headers
@@ -40,9 +40,9 @@ const Page = async () => {
     redirect("/sign-in")
   }
 
-  // 3. Return client UI dashboard home view (Authorized)
+  // 3. Return client UI dashboard home view wrapper (Authorized)
   return (
-    <HomeView />
+    <HomeViewClient />
   )
 }
 
