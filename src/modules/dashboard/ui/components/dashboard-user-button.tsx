@@ -9,7 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { GeneratedAvatar } from "@/components/generated-avatar";
 import {
-    DropdownMenu,
+    DropdownMenu, 
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuLabel,
