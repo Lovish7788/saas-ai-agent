@@ -27,12 +27,16 @@
 import { authClient } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
+import { trpc } from "@/trpc/client"
 
 export const HomeView = () => {
     const router = useRouter();
     
     // Retrieve the active user session data on the client side dynamically
     const { data: session } = authClient.useSession();
+
+    // Call our mock tRPC procedure using type-safe React Query hook
+    const { data: helloData, isLoading } = trpc.hello.useQuery();
     
     // Fallback loading UI if the session is not yet loaded or authenticated
     if (!session) {
@@ -47,10 +51,15 @@ export const HomeView = () => {
     // Main UI when user is authenticated
     return (
         <div className="flex items-center justify-center h-screen">
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-4 items-center">
                 {/* Welcomes user by their display name */}
-                <h1>hello {session.user?.name}</h1>
+                <h1 className="text-2xl font-bold">Hello, {session.user?.name}!</h1>
                 
+                {/* Display the response from tRPC API */}
+                <div className="p-3 bg-muted rounded-lg text-sm font-medium">
+                    {isLoading ? "Fetching from tRPC..." : helloData}
+                </div>
+
                 {/* Trigger log out flow via authClient and redirect to /sign-in on success */}
                 <Button onClick={() => authClient.signOut({
                     fetchOptions: {
@@ -61,4 +70,3 @@ export const HomeView = () => {
         </div>
     )
 }
- 
