@@ -1,8 +1,13 @@
 "use client"
 
+/**
+ * @file src/modules/dashboard/ui/components/dashboard-comand.tsx
+ * @description Dashboard Command Palette Search Dialog component
+ */
+
 import {
     Command,
-    CommandDialog,
+    CommandResponsiveDialog, // Using the responsive variant for automatic desktop/mobile layout switching
     CommandInput,
     CommandItem,
     CommandList
@@ -17,9 +22,10 @@ interface Props {
 
 export const DashboardComand = ({ open, setOpen }: Props) => {
     return (
-        <CommandDialog
+        <CommandResponsiveDialog
             open={open}
             onOpenChange={setOpen}
+            // Disables the backdrop blur overlay on search open
             overlayClassName="supports-backdrop-filter:backdrop-filter-none supports-backdrop-filter:backdrop-blur-none backdrop-blur-none backdrop-filter-none"
         >
             <Command>
@@ -38,6 +44,6 @@ export const DashboardComand = ({ open, setOpen }: Props) => {
                     </CommandItem>
                 </CommandList>
             </Command>
-        </CommandDialog>
+        </CommandResponsiveDialog>
     )
 }
