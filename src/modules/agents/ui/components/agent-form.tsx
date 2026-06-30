@@ -81,7 +81,7 @@ export const AgentForm = ({
                 {/* Dynamically generated avatar based on the typed name */}
                 <div className="flex justify-center pb-2">
                     <GeneratedAvatar
-                         seed={form.watch("name") || "agent"}
+                        seed={form.watch("name") || "agent"}
                         variant="bottsNeutral"
                         className="border size-16 rounded-full"
                     />
@@ -95,10 +95,10 @@ export const AgentForm = ({
                         <FormItem>
                             <FormLabel>Name</FormLabel>
                             <FormControl>
-                                <Input 
-                                    placeholder="E.g. Customer Assistant" 
-                                    {...field} 
-                                    disabled={isPending} 
+                                <Input
+                                    placeholder="E.g. Customer Assistant"
+                                    {...field}
+                                    disabled={isPending}
                                 />
                             </FormControl>
                             <FormMessage />

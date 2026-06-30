@@ -14,11 +14,10 @@ export const DashboardNavbar = () => {
                 e.preventDefault();
                 setCommandOpen((open) => !open);
             }
-            document.addEventListener("keydown", down);
-            return () =>
-                document.removeEventListener("keydown", down);
-
-        }
+        };
+        document.addEventListener("keydown", down);
+        return () =>
+            document.removeEventListener("keydown", down);
     }, [])
     return (
         <>
