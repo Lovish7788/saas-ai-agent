@@ -2,7 +2,7 @@
 
 /**
  * @file src/modules/agents/ui/views/agents-view.tsx
- * @description Agents View Component with controlled state responsive dialog and create form.
+ * @description Agents View Component rendering the lists grid and wrapping the AgentForm modal.
  */
 
 import { trpc } from "@/trpc/client";
@@ -11,26 +11,7 @@ import { ResponsiveDialog } from "@/components/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { PlusIcon, BotIcon, FileTextIcon } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { 
-    Form, 
-    FormControl, 
-    FormField, 
-    FormItem, 
-    FormLabel, 
-    FormMessage 
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
-
-// Define the schema matching our backend requirements
-const formSchema = z.object({
-    name: z.string().min(1, "Name is required"),
-    instructions: z.string().min(1, "Instructions are required"),
-});
+import { AgentForm } from "../components/agent-form";
 
 export const AgentsView = () => {
     // 1. Fetch agents data using React Suspense
@@ -38,37 +19,6 @@ export const AgentsView = () => {
 
     // 2. Control the open/close state of the responsive dialog
     const [isOpen, setIsOpen] = useState(false);
-
-    // 3. Get query client utilities for cache invalidation
-    const utils = trpc.useUtils();
-
-    // 4. Set up react-hook-form
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
-        defaultValues: {
-            name: "",
-            instructions: "",
-        }
-    });
-
-    // 5. Setup create mutation hook
-    const createMutation = trpc.agents.create.useMutation({
-        onSuccess: () => {
-            toast.success("Agent created successfully!");
-            setIsOpen(false);
-            form.reset();
-            // Invalidate getMany query to automatically refetch and reload the page list
-            utils.agents.getMany.invalidate();
-        },
-        onError: (error) => {
-            toast.error(error.message || "Failed to create agent");
-        }
-    });
-
-    // 6. Handle Form Submit
-    const onSubmit = (values: z.infer<typeof formSchema>) => {
-        createMutation.mutate(values);
-    };
 
     return (
         <div className="p-6 flex flex-col gap-y-6">
@@ -128,59 +78,11 @@ export const AgentsView = () => {
                 open={isOpen}
                 onOpenChange={setIsOpen}
             >
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2">
-                        <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Agent Name</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="E.g. Customer Support" {...field} disabled={createMutation.isPending} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="instructions"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Instructions</FormLabel>
-                                    <FormControl>
-                                        <Textarea 
-                                            placeholder="Define agent persona, instructions, and rules of engagement..." 
-                                            className="min-h-[100px]"
-                                            disabled={createMutation.isPending}
-                                            {...field} 
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <div className="flex justify-end gap-x-2 pt-4 border-t">
-                            <Button 
-                                type="button"
-                                variant="outline" 
-                                onClick={() => setIsOpen(false)}
-                                disabled={createMutation.isPending}
-                                className="cursor-pointer"
-                            >
-                                Cancel
-                            </Button>
-                            <Button 
-                                type="submit"
-                                disabled={createMutation.isPending}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
-                            >
-                                {createMutation.isPending ? "Creating..." : "Save Agent"}
-                            </Button>
-                        </div>
-                    </form>
-                </Form>
+                {/* Reusable form component with handlers */}
+                <AgentForm 
+                    onSuccess={() => setIsOpen(false)} 
+                    onCancel={() => setIsOpen(false)} 
+                />
             </ResponsiveDialog>
         </div>
     );
