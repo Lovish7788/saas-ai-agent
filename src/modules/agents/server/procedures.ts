@@ -1,15 +1,15 @@
 import { db } from "@/db";
 import { createTRPCRouter, baseProcedure, protectedProcedure } from "@/trpc/init";
-import { agents } from "@/db/schema";
+import { agents, user } from "@/db/schema";
 import { agentInsertSchema } from "@/modules/schema";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { sql , and, ilike, desc, count} from "drizzle-orm"; // Imported count from drizzle-orm
+import { sql , and, ilike, desc, count} from "drizzle-orm";
 
 import {DEFAULT_PAGE, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, MIN_PAGE_SIZE} from "@/constants";
 
 export const agentsRouter = createTRPCRouter({
-  // 1. Query to select a single agent (returns all fields plus mock meetingCount)
+  // 1. Query to select a single agent (performs join to return owner username)
   getOne: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ input }) => {
     const [existingAgent] = await db.select({
       id: agents.id,
@@ -18,14 +18,16 @@ export const agentsRouter = createTRPCRouter({
       instructions: agents.instructions,
       createdAt: agents.createdAt,
       updatedAt: agents.updatedAt,
-      meetingCount: sql<number>`5`
+      meetingCount: sql<number>`5`,
+      username: user.name // Select owner's user name
     })
       .from(agents)
+      .innerJoin(user, eq(agents.userId, user.id))
       .where(eq(agents.id, input.id));
     return existingAgent;
   }),
 
-  // 2. Query to select all agents from database with pagination and search
+  // 2. Query to select all agents from database with pagination and search (returns owner username to match structure)
   getMany: protectedProcedure
   .input(z.object({
     page: z.number().default(DEFAULT_PAGE),
@@ -44,8 +46,10 @@ export const agentsRouter = createTRPCRouter({
       instructions: agents.instructions,
       createdAt: agents.createdAt,
       updatedAt: agents.updatedAt,
-      meetingCount: sql<number>`5`
+      meetingCount: sql<number>`5`,
+      username: user.name // Select owner's username for getMany to keep data types aligned
     }).from(agents)
+    .innerJoin(user, eq(agents.userId, user.id)) // Join agent to user profile
     .where(
       and(
         eq(agents.userId , ctx.auth.user.id),
@@ -70,7 +74,7 @@ export const agentsRouter = createTRPCRouter({
     
     return {
       items: data,
-      total: total[0].count, // Accessing index 0 since select returns an array
+      total: total[0].count,
       totalPages
     };
   }),

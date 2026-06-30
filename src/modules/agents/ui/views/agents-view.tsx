@@ -18,8 +18,11 @@ import { columns } from "../components/colums";
 import { DataPagination } from "../components/data-pagination";
 import { useQueryStates } from "nuqs";
 import { filtersSearchParams } from "../../params";
+import { useRouter } from "next/navigation";
+import { ErrorState } from "@/components/error-state";
 
 export const AgentsView = () => {
+    const router = useRouter()
     // 1. Read/Write URL parameters dynamically using nuqs
     const [filters, setFilters] = useQueryStates(filtersSearchParams);
 
@@ -42,7 +45,7 @@ export const AgentsView = () => {
                     <h1 className="text-2xl font-bold tracking-tight">AI Agents</h1>
                     <p className="text-sm text-muted-foreground">Manage and configure your intelligent assistants</p>
                 </div>
-                <Button 
+                <Button
                     onClick={() => setIsOpen(true)}
                     className="bg-primary text-primary-foreground flex items-center gap-x-2 cursor-pointer"
                 >
@@ -54,22 +57,26 @@ export const AgentsView = () => {
             {/* Display the DataTable and DataPagination if agents exist, otherwise show EmptyState */}
             {agentsList && agentsList.length > 0 ? (
                 <div className="flex flex-col gap-y-4">
-                    <DataTable columns={columns} data={agentsList} />
-                    
+                    <DataTable
+                        columns={columns}
+                        data={agentsList}
+                        onRowClick={(row) => router.push(`/agents/${row.id}`)}
+                    />
+
                     {/* Reusable DataPagination component */}
-                    <DataPagination 
-                        page={filters.page} 
-                        totalPages={queryData.totalPages} 
+                    <DataPagination
+                        page={filters.page}
+                        totalPages={queryData.totalPages}
                         onPageChange={(newPage) => setFilters({ page: newPage })}
                     />
                 </div>
             ) : (
                 <div className="flex flex-col items-center justify-center py-16 px-4 border border-dashed rounded-xl bg-card shadow-inner gap-y-4">
-                    <EmptyState 
-                        title="No agent found" 
+                    <EmptyState
+                        title="No agent found"
                         description="You don't have any configured AI agents yet. Click the button below to build your first assistant."
                     />
-                    <Button 
+                    <Button
                         onClick={() => setIsOpen(true)}
                         className="bg-primary text-primary-foreground cursor-pointer flex items-center gap-x-2 mt-4"
                     >
@@ -87,9 +94,9 @@ export const AgentsView = () => {
                 onOpenChange={setIsOpen}
             >
                 {/* Reusable form component with handlers */}
-                <AgentForm 
-                    onSuccess={() => setIsOpen(false)} 
-                    onCancel={() => setIsOpen(false)} 
+                <AgentForm
+                    onSuccess={() => setIsOpen(false)}
+                    onCancel={() => setIsOpen(false)}
                 />
             </ResponsiveDialog>
         </div>
@@ -101,3 +108,11 @@ export const AgentsViewLoading = () => {
         <LoadingState title="Loading Agents" description="This may take few minutes" />
     );
 };
+export const AgentsViewError = () => {
+    return (
+        <ErrorState
+            title="Error Loading Agents"
+            description="Something went wrong"
+        />
+    )
+}
