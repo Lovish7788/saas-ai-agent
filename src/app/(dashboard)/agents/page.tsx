@@ -6,10 +6,18 @@ import { AgentListHeader } from "@/modules/agents/ui/components/agent-list-heade
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { SearchParams } from "nuqs/server";
+import { loadSearchParams } from "@/modules/agents/params";
 
-const page = async () => {
-    // 1. Initialize the query client for server-side fetching
+interface Props {
+    searchParams: Promise<SearchParams>
+}
 
+const page = async ({ searchParams }: Props) => {
+    // 1. Load and parse raw search query parameters from Next.js request
+    const params = await loadSearchParams(searchParams)
+
+    // 2. Enforce server-side authentication redirect
     const session = await auth.api.getSession({
         headers: await headers()
     });
@@ -20,8 +28,10 @@ const page = async () => {
 
     const queryClient = getQueryClient();
 
-    // 2. Prefetch the database request on the server to seed the query cache
-    void queryClient.prefetchQuery(trpc.agents.getMany.queryOptions());
+    // 3. Prefetch the database request on the server using parsed parameters (params)
+    void queryClient.prefetchQuery(trpc.agents.getMany.queryOptions({
+        ...params
+    }));
 
     return (
         <>

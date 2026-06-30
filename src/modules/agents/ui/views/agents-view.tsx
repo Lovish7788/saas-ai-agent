@@ -2,7 +2,7 @@
 
 /**
  * @file src/modules/agents/ui/views/agents-view.tsx
- * @description Agents View Component rendering the DataTable lists or EmptyState.
+ * @description Agents View Component rendering the DataTable lists with DataPagination.
  */
 
 import { trpc } from "@/trpc/client";
@@ -15,12 +15,23 @@ import { PlusIcon } from "lucide-react";
 import { AgentForm } from "../components/agent-form";
 import { DataTable } from "../components/data-table";
 import { columns } from "../components/colums";
+import { DataPagination } from "../components/data-pagination";
+import { useQueryStates } from "nuqs";
+import { filtersSearchParams } from "../../params";
 
 export const AgentsView = () => {
-    // 1. Fetch agents data using React Suspense
-    const [agentsList] = trpc.agents.getMany.useSuspenseQuery();
+    // 1. Read/Write URL parameters dynamically using nuqs
+    const [filters, setFilters] = useQueryStates(filtersSearchParams);
 
-    // 2. Control the open/close state of the responsive dialog
+    // 2. Fetch agents list using reactive URL parameters under Suspense
+    const [queryData] = trpc.agents.getMany.useSuspenseQuery({
+        page: filters.page,
+        search: filters.search || undefined,
+    });
+
+    const agentsList = queryData.items;
+
+    // 3. Control the open/close state of the responsive dialog
     const [isOpen, setIsOpen] = useState(false);
 
     return (
@@ -31,7 +42,7 @@ export const AgentsView = () => {
                     <h1 className="text-2xl font-bold tracking-tight">AI Agents</h1>
                     <p className="text-sm text-muted-foreground">Manage and configure your intelligent assistants</p>
                 </div>
-                <Button
+                <Button 
                     onClick={() => setIsOpen(true)}
                     className="bg-primary text-primary-foreground flex items-center gap-x-2 cursor-pointer"
                 >
@@ -40,16 +51,25 @@ export const AgentsView = () => {
                 </Button>
             </div>
 
-            {/* Display the DataTable if agents exist, otherwise show EmptyState */}
+            {/* Display the DataTable and DataPagination if agents exist, otherwise show EmptyState */}
             {agentsList && agentsList.length > 0 ? (
-                <DataTable columns={columns} data={agentsList} />
+                <div className="flex flex-col gap-y-4">
+                    <DataTable columns={columns} data={agentsList} />
+                    
+                    {/* Reusable DataPagination component */}
+                    <DataPagination 
+                        page={filters.page} 
+                        totalPages={queryData.totalPages} 
+                        onPageChange={(newPage) => setFilters({ page: newPage })}
+                    />
+                </div>
             ) : (
                 <div className="flex flex-col items-center justify-center py-16 px-4 border border-dashed rounded-xl bg-card shadow-inner gap-y-4">
-                    <EmptyState
-                        title="No agent found"
+                    <EmptyState 
+                        title="No agent found" 
                         description="You don't have any configured AI agents yet. Click the button below to build your first assistant."
                     />
-                    <Button
+                    <Button 
                         onClick={() => setIsOpen(true)}
                         className="bg-primary text-primary-foreground cursor-pointer flex items-center gap-x-2 mt-4"
                     >
@@ -67,9 +87,9 @@ export const AgentsView = () => {
                 onOpenChange={setIsOpen}
             >
                 {/* Reusable form component with handlers */}
-                <AgentForm
-                    onSuccess={() => setIsOpen(false)}
-                    onCancel={() => setIsOpen(false)}
+                <AgentForm 
+                    onSuccess={() => setIsOpen(false)} 
+                    onCancel={() => setIsOpen(false)} 
                 />
             </ResponsiveDialog>
         </div>
