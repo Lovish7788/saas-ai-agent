@@ -1,36 +1,87 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Meet.AI — SaaS AI Agent Platform
 
-## Getting Started
+Meet.AI is a modern, full-stack SaaS platform designed for creating and managing intelligent AI assistants. This project was developed as part of Antonio Erdeljac's 2025 cohort course, *"Build and Deploy a SaaS AI Agent Platform"*, showcasing a production-ready technology stack and robust software engineering patterns.
 
-First, run the development server:
+---
 
+## 🚀 Technology Stack
+
+- **Core Framework**: [Next.js 15 (App Router)](https://nextjs.org/) & [React 19](https://react.dev/)
+- **Styling & UI Components**: [Tailwind CSS v4](https://tailwindcss.com/), [Shadcn UI](https://ui.shadcn.com/), and [Vaul](https://github.com/emilkowalski/vaul) (mobile drawers)
+- **API Layer**: [tRPC v11](https://trpc.io/) (end-to-end type safety) & [TanStack React Query v5](https://tanstack.com/query/latest)
+- **ORM & Database**: [Drizzle ORM](https://orm.drizzle.team/) & [Neon (Serverless PostgreSQL)](https://neon.tech/)
+- **Authentication**: [Better Auth](https://www.better-auth.com/) (credential logins & GitHub/Google OAuth)
+- **Query Parameter Sync**: [nuqs](https://nuqs.dev/) (type-safe client/server query parameter state synchronization)
+
+---
+
+## 🗄️ Database Architecture (PostgreSQL Schema)
+
+The database layers are mapped via Drizzle ORM to a PostgreSQL server:
+
+1. **`user`**: Core user accounts.
+2. **`session`**: Active login sessions managed securely by Better Auth.
+3. **`account`**: Maps hashed passwords and OAuth keys back to the owner user.
+4. **`verification`**: Security codes used for email validation or password resets.
+5. **`agents`**: AI agents containing:
+   - `id`: Auto-generated unique NanoID key.
+   - `name`: Identifiable name of the assistant.
+   - `instructions`: Persona constraints, tasks, and system prompts.
+   - `userId`: Foreign key pointing to the user owner (`user.id` cascade delete).
+   - Timestamps: `createdAt` and auto-updating `updatedAt`.
+
+---
+
+## 💡 Key Features & Engineering Patterns
+
+### 1. Unified tRPC Procedures
+* **End-to-End Types**: All client calls use the generated proxy client hook:
+  `const [data] = trpc.agents.getMany.useSuspenseQuery(...)`
+* **Session Context Middleware**: Enforces server-side authentication validation using Better Auth session checks (`protectedProcedure`), isolating agent records based on the logged-in user ID to prevent unauthorized data access.
+* **Server-Side prefetching**: Pre-renders listing state on the server using Next.js prefetching helper functions (`prefetchQuery`) to seed TanStack query cache before hydration.
+
+### 2. Hybrid Responsive Dialogs
+* Implemented a custom `<ResponsiveDialog>` component that dynamically switches layouts:
+  * **Desktop**: Centered modal box (`Dialog` primitive).
+  * **Mobile**: Bottom slide-up sheet (`Drawer` primitive) for optimized touch interaction.
+  * Extracted form fields into a standalone `<AgentForm />` component utilizing Zod validators and `<GeneratedAvatar>` dynamically seeded as the user types the agent's name.
+
+### 3. Reactive Search Command Palette
+* Implemented a global command palette triggered by the `Ctrl + K` / `Cmd + K` key combination, utilizing react hooks to handle listeners and cleanups.
+
+### 4. Server-Client Synced Pagination
+* Displays AI agents in a data grid using TanStack `<DataTable>` columns.
+* Integrated the `<DataPagination />` component with `nuqs` to synchronize active page states dynamically with the browser's URL query string, ensuring browser history navigation remains intact.
+
+---
+
+## 🛠️ Getting Started
+
+### 1. Prerequisites
+Ensure you have Node.js installed, then clone the repository and install dependencies:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Environment Setup
+Create a `.env` file in the root directory:
+```env
+DATABASE_URL=postgresql://<user>:<password>@<host>/<db-name>?sslmode=require
+BETTER_AUTH_SECRET=your_auth_secret_token
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Database Migration
+Push your schema definitions directly to the Neon PostgreSQL database:
+```bash
+npm run db:push
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 4. Start Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
