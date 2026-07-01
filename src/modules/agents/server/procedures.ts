@@ -19,7 +19,7 @@ export const agentsRouter = createTRPCRouter({
       createdAt: agents.createdAt,
       updatedAt: agents.updatedAt,
       meetingCount: sql<number>`5`,
-      username: user.name // Select owner's user name
+      username: user.name
     })
       .from(agents)
       .innerJoin(user, eq(agents.userId, user.id))
@@ -27,7 +27,7 @@ export const agentsRouter = createTRPCRouter({
     return existingAgent;
   }),
 
-  // 2. Query to select all agents from database with pagination and search (returns owner username to match structure)
+  // 2. Query to select all agents from database with pagination and search
   getMany: protectedProcedure
   .input(z.object({
     page: z.number().default(DEFAULT_PAGE),
@@ -47,9 +47,9 @@ export const agentsRouter = createTRPCRouter({
       createdAt: agents.createdAt,
       updatedAt: agents.updatedAt,
       meetingCount: sql<number>`5`,
-      username: user.name // Select owner's username for getMany to keep data types aligned
+      username: user.name
     }).from(agents)
-    .innerJoin(user, eq(agents.userId, user.id)) // Join agent to user profile
+    .innerJoin(user, eq(agents.userId, user.id))
     .where(
       and(
         eq(agents.userId , ctx.auth.user.id),
@@ -90,5 +90,45 @@ export const agentsRouter = createTRPCRouter({
       }).returning();
 
       return createAgent;
+    }),
+
+  // 4. Mutation to update an existing agent (enforces user ownership)
+  update: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      name: z.string(),
+      instructions: z.string()
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const [updatedAgent] = await db
+        .update(agents)
+        .set({
+          name: input.name,
+          instructions: input.instructions
+        })
+        .where(
+          and(
+            eq(agents.id, input.id),
+            eq(agents.userId, ctx.auth.user.id)
+          )
+        )
+        .returning();
+      return updatedAgent;
+    }),
+
+  // 5. Mutation to delete an existing agent (enforces user ownership)
+  remove: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const [deletedAgent] = await db
+        .delete(agents)
+        .where(
+          and(
+            eq(agents.id, input.id),
+            eq(agents.userId, ctx.auth.user.id)
+          )
+        )
+        .returning();
+      return deletedAgent;
     }),
 });
