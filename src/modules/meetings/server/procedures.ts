@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { createTRPCRouter, baseProcedure, protectedProcedure } from "@/trpc/init";
-import { meetings, agents } from "@/db/schema"; // Import meetings and agents tables
+import { meetings, agents } from "@/db/schema";
+import { meetingInsertSchema, meetingUpdateSchema } from "@/modules/meetings/schema"; // Import insert and update schemas
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { sql , and, ilike, desc, count} from "drizzle-orm";
@@ -88,4 +89,41 @@ export const meetingsRouter = createTRPCRouter({
       totalPages
     };
   }),
+
+  // 3. Mutation to create a new meeting
+  create: protectedProcedure
+    .input(meetingInsertSchema)
+    .mutation(async ({ input, ctx }) => {
+      const [createMeeting] = await db
+        .insert(meetings)
+        .values({
+          name: input.name,
+          agentId: input.agentId,
+          userId: ctx.auth.user.id
+        })
+        .returning();
+      
+      return createMeeting;
+    }),
+
+  // 4. Mutation to update an existing meeting
+  update: protectedProcedure
+    .input(meetingUpdateSchema)
+    .mutation(async ({ input, ctx }) => {
+      const [updatedMeeting] = await db
+        .update(meetings)
+        .set({
+          name: input.name,
+          agentId: input.agentId
+        })
+        .where(
+          and(
+            eq(meetings.id, input.id),
+            eq(meetings.userId, ctx.auth.user.id)
+          )
+        )
+        .returning();
+      
+      return updatedMeeting;
+    }),
 });
