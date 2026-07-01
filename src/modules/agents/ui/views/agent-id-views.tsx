@@ -2,145 +2,118 @@
 
 /**
  * @file src/modules/agents/ui/views/agent-id-views.tsx
- * @description Single Agent Details view component utilizing Breadcrumbs and Action Dropdown Menu.
+ * @description Single Agent Details view component with edit/delete handlers, useConfirm modal verification, loaders and fallback states.
  */
 
-import { trpc } from "@/trpc/client";
-import { GeneratedAvatar } from "@/components/generated-avatar";
+import { toast } from "sonner";
+import { useState } from "react";
+import { VideoIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+
+import { trpc } from "@/trpc/client"; // Use standard trpc proxy client
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { MoreHorizontalIcon, Edit3Icon, TrashIcon, BotIcon, VideoIcon, UserIcon, FileTextIcon } from "lucide-react";
-import { LoadingState } from "@/components/loading-state";
+import { useConfirm } from "@/hooks/use-confirm";
 import { ErrorState } from "@/components/error-state";
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import Link from "next/link";
+import { LoadingState } from "@/components/loading-state";
+import { GeneratedAvatar } from "@/components/generated-avatar";
+
+import { UpdateAgentDialog } from "../components/update-agent-dialog";
+import { AgentIdViewHeader } from "../components/agent-Id-view-header";
 
 interface Props {
     agentId: string;
 }
 
 export const AgentIdView = ({ agentId }: Props) => {
-    // 1. Fetch single agent (returns agent info along with owner username)
-    const [agent] = trpc.agents.getOne.useSuspenseQuery({ id: agentId });
+    const router = useRouter();
+    const utils = trpc.useUtils(); // Use trpc context utils for type-safe query invalidation
 
-    if (!agent) {
-        return (
-            <div className="p-8 text-center text-muted-foreground">
-                Agent not found.
-            </div>
-        );
-    }
+    const [updateAgentDialogOpen, setUpdateAgentDialogOpen] = useState(false);
+
+    // Use suspense query directly from trpc client proxy hook (automatically typed return data)
+    const [data] = trpc.agents.getOne.useSuspenseQuery({ id: agentId });
+
+    // Standard client-side trpc delete mutation hook
+    const removeAgent = trpc.agents.remove.useMutation({
+        onSuccess: async () => {
+            await utils.agents.getMany.invalidate();
+            router.push("/agents");
+        },
+        onError: (error) => {
+            toast.error(error.message);
+        },
+    });
+
+    const [RemoveConfirmation, confirmRemove] = useConfirm(
+        "Are you sure?",
+        `The following action will remove ${data.meetingCount} associated meetings`,
+    );
+
+    const handleRemoveAgent = async () => {
+        const ok = await confirmRemove();
+
+        if (!ok) return;
+
+        await removeAgent.mutateAsync({ id: agentId });
+    };
 
     return (
-        <div className="flex-1 py-6 px-4 md:px-8 flex flex-col gap-y-6 max-w-4xl mx-auto">
-            {/* Breadcrumb section */}
-            <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink asChild>
-                            <Link href="/">Home</Link>
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink asChild>
-                            <Link href="/agents">Agents</Link>
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbPage className="capitalize">{agent.name}</BreadcrumbPage>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
-
-            {/* Header profile details block */}
-            <div className="flex items-center justify-between border-b pb-4">
-                <div className="flex items-center gap-x-3">
-                    <GeneratedAvatar
-                        seed={agent.name}
-                        variant="bottsNeutral"
-                        className="size-12 border rounded-full bg-muted"
-                    />
-                    <div>
-                        <h1 className="text-2xl font-bold tracking-tight capitalize">{agent.name}</h1>
-                        <p className="text-xs text-muted-foreground flex items-center gap-x-1 mt-0.5">
-                            <UserIcon className="size-3" />
-                            Created by <span className="font-medium text-foreground">{agent.username}</span>
-                        </p>
-                    </div>
-                </div>
-
-                {/* Dropdown Menu actions */}
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer">
-                            <MoreHorizontalIcon className="size-4" />
-                            <span className="sr-only">Open actions</span>
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem className="cursor-pointer flex items-center gap-x-2">
-                            <Edit3Icon className="size-4 text-muted-foreground" />
-                            Edit Agent
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive flex items-center gap-x-2">
-                            <TrashIcon className="size-4" />
-                            Delete Agent
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
-
-            {/* Content Details for Agent */}
-            <div className="space-y-6">
-                {/* Meetings Badge display */}
-                <div className="flex items-center gap-x-4 bg-muted/40 p-4 rounded-xl border">
-                    <div className="p-2 bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 rounded-lg">
-                        <VideoIcon className="size-5" />
-                    </div>
-                    <div>
-                        <h3 className="text-sm font-semibold">Total Meetings</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">{agent.meetingCount} meetings scheduled</p>
-                    </div>
-                </div>
-
-                {/* Instructions section */}
-                <div className="space-y-2">
-                    <h3 className="text-sm font-semibold flex items-center gap-x-2 text-foreground">
-                        <FileTextIcon className="size-4 text-muted-foreground" />
-                        Instructions
-                    </h3>
-                    <div className="text-sm leading-relaxed text-muted-foreground bg-card p-5 rounded-xl border whitespace-pre-wrap shadow-sm">
-                        {agent.instructions}
+        <>
+            <RemoveConfirmation />
+            <UpdateAgentDialog
+                open={updateAgentDialogOpen}
+                onOpenChange={setUpdateAgentDialogOpen}
+                initialValues={data}
+            />
+            <div className="flex-1 py-4 px-4 md:px-8 flex flex-col gap-y-4">
+                <AgentIdViewHeader
+                    agentId={agentId}
+                    agentName={data.name}
+                    onEdit={() => setUpdateAgentDialogOpen(true)}
+                    onRemove={handleRemoveAgent}
+                />
+                <div className="bg-white rounded-lg border">
+                    <div className="px-4 py-5 gap-y-5 flex flex-col col-span-5">
+                        <div className="flex items-center gap-x-3">
+                            <GeneratedAvatar
+                                variant="bottsNeutral" // Correct spelling from "botttsNeutral" to "bottsNeutral"
+                                seed={data.name}
+                                className="size-10"
+                            />
+                            <h2 className="text-2xl font-medium">{data.name}</h2>
+                        </div>
+                        <Badge
+                            variant="outline"
+                            className="flex items-center gap-x-2 [&>svg]:size-4"
+                        >
+                            <VideoIcon className="text-blue-700" />
+                            {data.meetingCount} {data.meetingCount === 1 ? "meeting" : "meetings"}
+                        </Badge>
+                        <div className="flex flex-col gap-y-4">
+                            <p className="text-lg font-medium">Instructions</p>
+                            <p className="text-neutral-800">{data.instructions}</p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 };
 
 export const AgentIdViewLoading = () => {
     return (
-        <LoadingState title="Loading agent details" description="This may take few seconds" />
+        <LoadingState
+            title="Loading Agent"
+            description="This may take a few seconds"
+        />
     );
 };
 
 export const AgentIdViewError = () => {
     return (
-        <ErrorState title="Error in loading agent" description="Something went wrong while fetching details" />
+        <ErrorState
+            title="Error Loading Agent"
+            description="Something went wrong"
+        />
     );
 };

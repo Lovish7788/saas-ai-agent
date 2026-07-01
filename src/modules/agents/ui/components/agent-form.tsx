@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { GeneratedAvatar } from "@/components/generated-avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { trpc } from "@/trpc/client";
 import { toast } from "sonner";
 
@@ -40,13 +41,28 @@ export const AgentForm = ({
     const router = useRouter();
     const utils = trpc.useUtils();
 
-    // 1. Setup client-side tRPC mutation hook
+    // 1. Setup client-side tRPC mutation hooks
     const createAgent = trpc.agents.create.useMutation({
         onSuccess: () => {
             toast.success("Agent created successfully!");
             form.reset();
             // Invalidate getMany query to refresh the agents dashboard list
             utils.agents.getMany.invalidate();
+            onSuccess?.();
+        },
+        onError: (error) => {
+            toast.error(error.message || "Something went wrong");
+        }
+    });
+
+    const updateAgent = trpc.agents.update.useMutation({
+        onSuccess: () => {
+            toast.success("Agent updated successfully!");
+            // Invalidate queries to refresh detail views
+            utils.agents.getMany.invalidate();
+            if (initialValues?.id) {
+                utils.agents.getOne.invalidate({ id: initialValues.id });
+            }
             onSuccess?.();
         },
         onError: (error) => {
@@ -64,12 +80,16 @@ export const AgentForm = ({
     });
 
     const isEdit = !!initialValues?.id;
-    const isPending = createAgent.isPending;
+    const isPending = createAgent.isPending || updateAgent.isPending;
 
     // 3. Form submission callback
     const onSubmit = (values: z.infer<typeof agentInsertSchema>) => {
-        if (isEdit) {
-            console.log("TODO: UpdateAgent");
+        if (isEdit && initialValues?.id) {
+            updateAgent.mutate({
+                id: initialValues.id,
+                name: values.name,
+                instructions: values.instructions
+            });
         } else {
             createAgent.mutate(values);
         }
@@ -142,8 +162,9 @@ export const AgentForm = ({
                     <Button
                         type="submit"
                         disabled={isPending}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer flex items-center gap-x-2"
                     >
+                        {isPending && <Loader2 className="size-4 animate-spin" />}
                         {isPending ? "Saving..." : "Save Agent"}
                     </Button>
                 </div>

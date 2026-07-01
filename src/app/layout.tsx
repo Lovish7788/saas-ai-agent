@@ -4,6 +4,7 @@ import "./globals.css";
 import { Inter } from "next/font/google";
 import { TRPCReactProvider } from '@/trpc/client';
 import { NuqsAdapter } from 'nuqs/adapters/next';
+import NextTopLoader from "nextjs-toploader";
 const inter = Inter({
 
   subsets: ["latin"],
@@ -31,6 +32,7 @@ export default function RootLayout({
           <body
             className={`${inter.className} antialiased`}
           >
+            <NextTopLoader showSpinner={false} color="#10b981" />
             {children}
           </body>
         </html>
