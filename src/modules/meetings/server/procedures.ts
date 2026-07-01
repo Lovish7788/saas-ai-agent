@@ -58,7 +58,8 @@ export const meetingsRouter = createTRPCRouter({
       createdAt: meetings.createdAt,
       updatedAt: meetings.updatedAt,
       agentId: meetings.agentId,
-      agentName: agents.name
+      agentName: agents.name,
+      duration:sql<number>`EXTRACT(EPOCH FROM( endes_at - started_at))`.as('duration') 
     }).from(meetings)
     .innerJoin(agents, eq(meetings.agentId, agents.id))
     .where(
